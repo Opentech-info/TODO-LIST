@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pro To‑Do • Minimal, Fast, Animated</title>
+  <meta name="theme-color" content="#0f172a" />
+  <style>
+    :root{
+      --bg: #0b1020;
+      --panel:#0f172a;
+      --panel-2:#111a32;
+      --text:#e5e7eb;
+      --muted:#a6adbb;
+      --accent:#7c3aed; /* purple */
+      --accent-2:#22c55e; /* green */
+      --danger:#ef4444;
+      --warning:#f59e0b;
+      --ok:#10b981;
+      --border:#1f2b4a;
+      --shadow: 0 10px 30px rgba(0,0,0,.35), 0 2px 10px rgba(0,0,0,.25);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --transition: 220ms cubic-bezier(.2,.7,.3,1);
+    }
+    @media (prefers-color-scheme: light){
+      :root{
+        --bg: #f4f6fb;
+        --panel:#ffffff;
+        --panel-2:#f1f5f9;
+        --text:#0f172a;
+        --muted:#475569;
+        --border:#e2e8f0;
+        --shadow: 0 12px 30px rgba(2,6,23,.08), 0 2px 10px rgba(2,6,23,.06);
+      }
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font: 15px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      color:var(--text); background: radial-gradient(1200px 800px at 10% -10%, #1b1f37 0%, var(--bg) 46%), var(--bg);
+      overflow:hidden;
+    }
+    a{color:inherit; text-decoration:none}
+    button{font:inherit}
+
+    /* Layout */
+    .app{display:grid; grid-template-rows:64px 1fr; height:100%}
+    header{
+      display:flex; align-items:center; gap:12px; padding:0 14px; background:transparent; position:relative; z-index:30;
+    }
+    .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.3px}
+    .hamburger{border:0; background:transparent; width:40px; height:40px; display:grid; place-items:center; border-radius:10px; color:var(--text); cursor:pointer}
+    .hamburger:hover{background:rgba(255,255,255,.06)}
+    .hamburger svg{transition:transform var(--transition)}
+
+    .searchbar{position:relative; flex:1;}
+    .searchbar input{
+      width:100%; background:var(--panel); border:1px solid var(--border); color:var(--text);
+      padding:12px 44px; border-radius:999px; outline:0; box-shadow:var(--shadow);
+      transition:border var(--transition), transform var(--transition);
+    }
+    .searchbar input:focus{border-color:var(--accent); transform: translateY(-1px)}
+    .searchbar .icon{position:absolute; left:12px; top:50%; transform:translateY(-50%); opacity:.7}
+
+    .actions{display:flex; align-items:center; gap:8px}
+    .iconbtn{border:1px solid var(--border); background:var(--panel); width:40px; height:40px; border-radius:12px; display:grid; place-items:center; cursor:pointer; transition:transform var(--transition), background var(--transition)}
+    .iconbtn:hover{transform: translateY(-2px); background:var(--panel-2)}
+
+    .avatar{width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, var(--accent), #2563eb); display:grid; place-items:center; font-weight:700}
+
+    /* Drawer */
+    .drawer-wrap{position:fixed; inset:0; display:grid; grid-template-columns: 0 1fr; transition:grid-template-columns var(--transition); z-index:40; pointer-events:none}
+    .drawer-wrap.open{grid-template-columns: min(400px, 25vw) 1fr; pointer-events:auto}
+    .drawer{background:var(--panel); border-right:1px solid var(--border); box-shadow:var(--shadow); transform: translateX(-100%); transition: transform var(--transition); display:flex; flex-direction:column}
+    .drawer-wrap.open .drawer{transform: translateX(0)}
+    .drawer header{padding:18px}
+    .drawer nav{padding:10px 12px; overflow:auto}
+    .nav-item{display:flex; align-items:center; gap:12px; padding:12px; border-radius:12px; cursor:pointer; transition: background var(--transition), transform var(--transition)}
+    .nav-item:hover{background:var(--panel-2); transform: translateX(2px)}
+    .nav-item.active{background:linear-gradient(90deg, rgba(124,58,237,.18), transparent); border:1px solid rgba(124,58,237,.25)}
+    .projects{margin-top:12px}
+    .projects h4{margin:6px 12px; color:var(--muted); font-size:12px; letter-spacing:.6px; text-transform:uppercase}
+
+    .overlay{background: rgba(2,6,23,.45); opacity:0; transition: opacity var(--transition);}
+    .drawer-wrap.open .overlay{opacity:1}
+
+    /* Main */
+    main{padding:18px; overflow:auto}
+
+    .toolbar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)); border:1px solid var(--border); padding:14px; border-radius:var(--radius); box-shadow:var(--shadow)}
+    .toolbar input[type="text"]{flex: 1 1 240px; background:var(--panel); border:1px solid var(--border); color:var(--text); padding:12px 14px; border-radius:12px; outline:0}
+    .toolbar select, .toolbar input[type="date"]{background:var(--panel); border:1px solid var(--border); color:var(--text); padding:12px; border-radius:12px}
+    .toolbar .addbtn{background:linear-gradient(135deg, var(--accent), #2563eb); border:0; color:white; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer; box-shadow:var(--shadow); transition:transform var(--transition), filter var(--transition)}
+    .addbtn:hover{transform: translateY(-2px); filter:saturate(1.1)}
+
+    .filters{margin-top:16px; display:flex; flex-wrap:wrap; gap:10px; align-items:center}
+    .chip{padding:8px 12px; border:1px solid var(--border); border-radius:999px; background:var(--panel); cursor:pointer; user-select:none; transition:transform var(--transition), background var(--transition)}
+    .chip.active{background:rgba(124,58,237,.15); border-color:rgba(124,58,237,.35)}
+    .chip:hover{transform: translateY(-2px)}
+
+    .list{margin-top:18px; display:grid; gap:12px}
+    .task{display:grid; grid-template-columns: 28px 1fr auto; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; box-shadow: var(--shadow); position:relative; transition: transform var(--transition), background var(--transition), border var(--transition)}
+    .task:hover{transform: translateY(-2px)}
+    .task.dragging{opacity:.8; transform: rotate(.3deg) scale(1.01)}
+    .task.completed{opacity:.65; background:linear-gradient(180deg, rgba(16,185,129,.12), transparent)}
+
+    .task .title{font-weight:650}
+    .task .meta{display:flex; gap:8px; align-items:center; color:var(--muted); font-size:12px}
+    .badge{padding:4px 8px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2)}
+    .priority-high{background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.3); color:#fecaca}
+    .priority-med{background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.3); color:#fde68a}
+    .priority-low{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.3); color:#bbf7d0}
+
+    .task-controls{display:flex; gap:6px}
+    .task-controls .iconbtn{width:36px; height:36px}
+    .drag{cursor:grab; opacity:.7}
+
+    /* Empty state */
+    .empty{opacity:.6; text-align:center; padding:40px; border:1px dashed var(--border); border-radius:16px}
+
+    /* Toasts */
+    .toast-area{position:fixed; right:16px; bottom:16px; display:grid; gap:10px; z-index:60}
+    .toast{background:var(--panel); border:1px solid var(--border); border-left:6px solid var(--accent); padding:12px 14px; border-radius:12px; box-shadow:var(--shadow); animation: slideIn .28s ease-out}
+
+    @keyframes slideIn{from{opacity:0; transform: translateY(8px)} to{opacity:1; transform:none}}
+
+    /* Profile Modal */
+    .modal{position:fixed; inset:0; display:grid; place-items:center; background:rgba(2,6,23,.55); opacity:0; pointer-events:none; transition: opacity var(--transition); z-index:70}
+    .modal.open{opacity:1; pointer-events:auto}
+    .card{width:min(560px, 92vw); background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px}
+    .divider{height:1px; background:var(--border); margin:12px 0}
+
+    /* Notification dropdown */
+    .dropdown{position:absolute; right:72px; top:58px; width:320px; background:var(--panel); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); display:none}
+    .dropdown.open{display:block; animation: drop .16s ease-out}
+    @keyframes drop{from{opacity:0; transform: translateY(-6px)}to{opacity:1; transform:none}}
+
+    /* Tiny helpers */
+    .row{display:flex; align-items:center; gap:10px}
+    .grow{flex:1}
+    .muted{color:var(--muted)}
+    .sr-only{position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0}
+
+    @media (max-width: 800px){
+      .drawer-wrap.open{grid-template-columns: 80vw 1fr}
+      .dropdown{right:10px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="Advanced To‑Do">
+    <header>
+      <button class="hamburger" id="btn-drawer" aria-label="Open navigation" title="Menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="brand">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7l2 3h9v13a2 2 0 0 1-2 2H3z"/><path d="M3 3v18"/></svg>
+        <span>Pro To‑Do</span>
+      </div>
+      <div class="searchbar" role="search">
+        <span class="icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </span>
+        <input id="search" placeholder="Search tasks, projects, tags... (Ctrl+/)" />
+      </div>
+      <div class="actions">
+        <button class="iconbtn" id="btn-bell" aria-haspopup="true" aria-expanded="false" aria-controls="notif-dd" title="Notifications">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </button>
+        <div class="avatar" id="btn-profile" role="button" title="Profile" aria-haspopup="dialog">AZ</div>
+      </div>
+      <div class="dropdown" id="notif-dd" role="menu" aria-label="Notifications">
+        <div style="padding:12px 14px; display:flex; justify-content:space-between; align-items:center">
+          <strong>Notifications</strong>
+          <button class="chip" id="clear-notifs">Clear</button>
+        </div>
+        <div id="notif-list" style="display:grid; gap:8px; padding:0 12px 12px"></div>
+      </div>
+    </header>
+
+    <div class="drawer-wrap" id="drawer">
+      <aside class="drawer" aria-label="Main navigation">
+        <header class="row">
+          <div class="avatar" style="width:42px;height:42px">AZ</div>
+          <div>
+            <div id="profile-name" style="font-weight:700">EAGLE</div>
+            <div class="muted" id="profile-email" style="font-size:12px">opentech.info@protonmail.com</div>
+          </div>
+          <span class="grow"></span>
+          <button class="iconbtn" id="btn-close-drawer" title="Close">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </header>
+        <nav>
+          <div class="nav-item active" data-view="inbox">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5 7l-2 5v6a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-6l-2-5z"/></svg>
+            <span>Inbox</span>
+          </div>
+          <div class="nav-item" data-view="today">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Today</span>
+          </div>
+          <div class="nav-item" data-view="upcoming">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h7l-1 9 8-12h-7l1-9z"/></svg>
+            <span>Upcoming</span>
+          </div>
+          <div class="nav-item" data-view="completed">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Completed</span>
+          </div>
+          <div class="projects">
+            <h4>Projects</h4>
+            <div id="project-list" style="display:grid; gap:6px"></div>
+            <button class="chip" id="add-project">+ New Project</button>
+          </div>
+        </nav>
+      </aside>
+      <div class="overlay" id="drawer-overlay" aria-hidden="true"></div>
+    </div>
+
+    <main>
+      <div class="toolbar" role="region" aria-label="Add task">
+        <input id="task-title" type="text" placeholder="Add a task… (Alt+N)" />
+        <input id="task-date" type="date" />
+        <select id="task-priority">
+          <option value="low">Low</option>
+          <option value="medium" selected>Medium</option>
+          <option value="high">High</option>
+        </select>
+        <input id="task-tags" type="text" placeholder="#tags comma separated" style="flex:1 1 140px" />
+        <select id="task-project" title="Project" style="min-width:140px"></select>
+        <button class="addbtn" id="add-task">Add Task</button>
+      </div>
+
+      <div class="filters">
+        <span class="chip active" data-filter="all">All</span>
+        <span class="chip" data-filter="active">Active</span>
+        <span class="chip" data-filter="completed">Completed</span>
+        <span class="chip" data-sort="date">Sort by Date</span>
+        <span class="chip" data-sort="priority">Sort by Priority</span>
+      </div>
+
+      <section class="list" id="task-list" aria-live="polite"></section>
+      <div class="empty" id="empty">No tasks yet. Add your first task above ✨</div>
+    </main>
+  </div>
+
+  <!-- Profile Modal -->
+  <div class="modal" id="profile-modal" role="dialog" aria-modal="true" aria-labelledby="profile-title">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2 id="profile-title" style="margin:0">Profile</h2>
+        <button class="iconbtn" id="close-profile" title="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="divider"></div>
+      <div class="row">
+        <div class="avatar" style="width:64px;height:64px">AZ</div>
+        <div class="grow">
+          <label>Name<br/><input id="pf-name" style="width:100%" /></label>
+          <br/>
+          <label>Email<br/><input id="pf-email" style="width:100%" /></label>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <strong>Appearance</strong><br>
+          <span class="muted">Auto / Light / Dark</span>
+        </div>
+        <div class="row">
+          <button class="chip" data-theme="auto">Auto</button>
+          <button class="chip" data-theme="light">Light</button>
+          <button class="chip" data-theme="dark">Dark</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="row" style="justify-content:flex-end; gap:12px">
+        <button class="chip" id="export-json">Export JSON</button>
+        <button class="addbtn" id="save-profile">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-area" id="toasts" aria-live="polite"></div>
+
+  <template id="task-template">
+    <article class="task" draggable="true">
+      <input type="checkbox" aria-label="Mark complete" />
+      <div>
+        <div class="title"></div>
+        <div class="meta"></div>
+      </div>
+      <div class="task-controls">
+        <button class="iconbtn drag" title="Drag to reorder" aria-label="Drag">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4h4v4h-4zM4 10h4v4H4zM16 10h4v4h-4zM10 16h4v4h-4z"/></svg>
+        </button>
+        <button class="iconbtn edit" title="Edit" aria-label="Edit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        </button>
+        <button class="iconbtn del" title="Delete" aria-label="Delete">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const storage = {
+      save(key, val){ localStorage.setItem(key, JSON.stringify(val)); },
+      load(key, fallback){ try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback } }
+    }
+
+    const state = {
+      tasks: storage.load('tasks', []),
+      projects: storage.load('projects', [{id:'inbox', name:'Inbox'}]),
+      filters: { status:'all', sort:null, view:'inbox', query:'' },
+      profile: storage.load('profile', {name:'EAGLE', email:'opentech.info@protonmail.com', theme:'auto'}),
+      notifs: storage.load('notifs', [])
+    }
+
+    // ————— Utilities —————
+    const uid = () => Math.random().toString(36).slice(2,9)
+    const by = (k, dir=1) => (a,b) => (a[k] > b[k] ? 1 : -1) * dir
+    const todayStr = () => new Date().toISOString().slice(0,10)
+
+    function toast(msg){
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      $('#toasts').appendChild(el);
+      setTimeout(()=>{ el.style.opacity = '0'; el.style.transform='translateY(6px)'; setTimeout(()=>el.remove(), 300) }, 2600);
+    }
+
+    function addNotif(text){
+      state.notifs.unshift({ id: uid(), text, time: new Date().toLocaleString() })
+      storage.save('notifs', state.notifs)
+      renderNotifs()
+    }
+
+    // ————— Drawer —————
+    const drawer = $('#drawer');
+    $('#btn-drawer').addEventListener('click', ()=> drawer.classList.add('open'))
+    $('#btn-close-drawer').addEventListener('click', ()=> drawer.classList.remove('open'))
+    $('#drawer-overlay').addEventListener('click', ()=> drawer.classList.remove('open'))
+
+    // ————— Notifications dropdown —————
+    const bell = $('#btn-bell');
+    const dd = $('#notif-dd');
+    bell.addEventListener('click', (e)=>{
+      const isOpen = dd.classList.toggle('open');
+      bell.setAttribute('aria-expanded', String(isOpen));
+    })
+    document.addEventListener('click', (e)=>{
+      if (!dd.contains(e.target) && !bell.contains(e.target)) dd.classList.remove('open')
+    })
+    $('#clear-notifs').addEventListener('click', ()=>{ state.notifs = []; storage.save('notifs', state.notifs); renderNotifs(); toast('Notifications cleared') })
+
+    function renderNotifs(){
+      const list = $('#notif-list');
+      list.innerHTML = state.notifs.map(n=>`<div class="row" style="justify-content:space-between">
+        <div>
+          <div>${n.text}</div>
+          <div class="muted" style="font-size:12px">${n.time}</div>
+        </div>
+        <button class="chip" data-id="${n.id}">Ok</button>
+      </div>`).join('') || '<div class="muted" style="padding:0 12px 12px">No notifications</div>'
+      list.querySelectorAll('button').forEach(btn=> btn.onclick = ()=>{
+        state.notifs = state.notifs.filter(n=>n.id!==btn.dataset.id); storage.save('notifs', state.notifs); renderNotifs()
+      })
+    }
+
+    // ————— Projects —————
+    function renderProjects(){
+      const wrap = $('#project-list');
+      wrap.innerHTML = ''
+      state.projects.forEach(p=>{
+        const div = document.createElement('div')
+        div.className = 'nav-item'
+        div.dataset.view = p.id
+        div.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h18M3 12h18M3 17h18"/></svg><span>${p.name}</span>`
+        wrap.appendChild(div)
+      })
+
+      const sel = $('#task-project');
+      sel.innerHTML = state.projects.map(p=>`<option value="${p.id}">${p.name}</option>`).join('')
+    }
+
+    $('#add-project').addEventListener('click', ()=>{
+      const name = prompt('Project name');
+      if(!name) return;
+      const id = name.toLowerCase().replace(/\s+/g,'-') + '-' + uid();
+      state.projects.push({id, name});
+      storage.save('projects', state.projects);
+      renderProjects();
+      addNotif(`Project “${name}” added`)
+    })
+
+    // ————— Tasks —————
+    function renderTasks(){
+      const list = $('#task-list');
+      const {status, sort, view, query} = state.filters;
+      let tasks = state.tasks.filter(t=> (view==='inbox' ? true : t.project===view));
+      if (status==='active') tasks = tasks.filter(t=> !t.done);
+      if (status==='completed') tasks = tasks.filter(t=> t.done);
+      if (query) tasks = tasks.filter(t=> (t.title+','+t.tags.join(',')).toLowerCase().includes(query.toLowerCase()))
+      if (sort==='date') tasks.sort(by('date'))
+      if (sort==='priority') tasks.sort((a,b)=>({high:0, medium:1, low:2}[a.priority]-({high:0, medium:1, low:2}[b.priority])))
+
+      list.innerHTML = ''
+      if (!tasks.length){ $('#empty').style.display='block'; return } else { $('#empty').style.display='none' }
+
+      tasks.forEach(t=> list.appendChild(taskEl(t)))
+      initDnD()
+    }
+
+    function taskEl(t){
+      const tpl = $('#task-template').content.cloneNode(true);
+      const el = tpl.querySelector('.task');
+      el.dataset.id = t.id;
+      if(t.done) el.classList.add('completed')
+      const cb = tpl.querySelector('input[type="checkbox"]');
+      cb.checked = t.done;
+      cb.onchange = ()=>{ t.done = cb.checked; storage.save('tasks', state.tasks); renderTasks(); addNotif(cb.checked? 'Task completed' : 'Task marked active') }
+      const title = tpl.querySelector('.title');
+      title.textContent = t.title;
+      const meta = tpl.querySelector('.meta');
+      const due = t.date ? `<span class="badge">📅 ${t.date}</span>` : ''
+      const pr = t.priority==='high'? 'priority-high' : t.priority==='medium'? 'priority-med' : 'priority-low'
+      const tags = t.tags.map(x=>`<span class="badge">#${x}</span>`).join('')
+      meta.innerHTML = `${due} <span class="badge ${pr}">${t.priority}</span> ${tags}`
+      tpl.querySelector('.del').onclick = ()=>{ state.tasks = state.tasks.filter(x=>x.id!==t.id); storage.save('tasks', state.tasks); renderTasks(); toast('Task deleted') }
+      tpl.querySelector('.edit').onclick = ()=> editTask(t)
+      return el
+    }
+
+    function editTask(t){
+      const title = prompt('Edit title', t.title); if(title==null) return; t.title = title.trim()||t.title;
+      const date = prompt('Due date (YYYY-MM-DD)', t.date||todayStr()); if(date) t.date = date;
+      const priority = prompt('Priority (low|medium|high)', t.priority); if(['low','medium','high'].includes(priority)) t.priority = priority
+      const tags = prompt('Tags (comma separated)', t.tags.join(',')); if(tags!==null) t.tags = tags.split(',').map(s=>s.trim()).filter(Boolean)
+      storage.save('tasks', state.tasks); renderTasks(); toast('Task updated')
+    }
+
+    function addTaskFromInputs(){
+      const title = $('#task-title').value.trim();
+      if(!title){ toast('Enter a task title'); return }
+      const t = {
+        id: uid(),
+        title,
+        date: $('#task-date').value || '',
+        priority: $('#task-priority').value,
+        tags: $('#task-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+        done:false,
+        project: $('#task-project').value || 'inbox',
+        createdAt: Date.now()
+      }
+      state.tasks.unshift(t);
+      storage.save('tasks', state.tasks);
+      ['#task-title','#task-date','#task-tags'].forEach(sel=> $(sel).value='');
+      renderTasks();
+      toast('Task added');
+    }
+    $('#add-task').addEventListener('click', addTaskFromInputs)
+    $('#task-title').addEventListener('keydown', e=>{ if(e.key==='Enter') addTaskFromInputs() })
+
+    // ————— Drag & Drop reorder —————
+    function initDnD(){
+      $$('#task-list .task').forEach(el=>{
+        el.addEventListener('dragstart', e=>{
+          el.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', el.dataset.id);
+        })
+        el.addEventListener('dragend', ()=> el.classList.remove('dragging'))
+      })
+      const list = $('#task-list');
+      list.addEventListener('dragover', e=>{
+        e.preventDefault();
+        const dragging = $('.task.dragging');
+        const after = getDragAfterElement(list, e.clientY);
+        if(after==null) list.appendChild(dragging); else list.insertBefore(dragging, after);
+      })
+      list.addEventListener('drop', ()=>{
+        const ids = $$('#task-list .task').map(x=>x.dataset.id);
+        state.tasks.sort((a,b)=> ids.indexOf(a.id)-ids.indexOf(b.id));
+        storage.save('tasks', state.tasks);
+      })
+    }
+    function getDragAfterElement(container, y){
+      const els = [...container.querySelectorAll('.task:not(.dragging)')]
+      return els.reduce((closest, child)=>{
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height/2;
+        if(offset<0 && offset>closest.offset){ return { offset, element: child } } else { return closest }
+      }, {offset: Number.NEGATIVE_INFINITY}).element
+    }
+
+    // ————— Filters, Search, Shortcuts —————
+    $$('.chip[data-filter]').forEach(ch=> ch.addEventListener('click', ()=>{
+      $$('.chip[data-filter]').forEach(x=>x.classList.remove('active'))
+      ch.classList.add('active');
+      state.filters.status = ch.dataset.filter; renderTasks();
+    }))
+    $$('.chip[data-sort]').forEach(ch=> ch.addEventListener('click', ()=>{ state.filters.sort = ch.dataset.sort; renderTasks() }))
+
+    $('#search').addEventListener('input', e=>{ state.filters.query = e.target.value; renderTasks() })
+    document.addEventListener('keydown', e=>{
+      if(e.key==='/' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); $('#search').focus() }
+      if(e.altKey && (e.key==='n' || e.key==='N')){ e.preventDefault(); $('#task-title').focus() }
+      if(e.key==='Escape'){ drawer.classList.remove('open'); $('#profile-modal').classList.remove('open'); dd.classList.remove('open') }
+    })
+
+    // ————— Nav —————
+    document.addEventListener('click', e=>{
+      const item = e.target.closest('.nav-item');
+      if(!item) return;
+      $$('.nav-item').forEach(x=>x.classList.remove('active'))
+      item.classList.add('active');
+      state.filters.view = item.dataset.view;
+      drawer.classList.remove('open');
+      renderTasks();
+    })
+
+    // ————— Profile —————
+    function openProfile(){
+      $('#pf-name').value = state.profile.name || ''
+      $('#pf-email').value = state.profile.email || ''
+      $('#profile-modal').classList.add('open')
+    }
+    $('#btn-profile').addEventListener('click', openProfile)
+    $('#close-profile').addEventListener('click', ()=> $('#profile-modal').classList.remove('open'))
+    $('#save-profile').addEventListener('click', ()=>{
+      state.profile.name = $('#pf-name').value.trim()||state.profile.name
+      state.profile.email = $('#pf-email').value.trim()||state.profile.email
+      storage.save('profile', state.profile)
+      $('#profile-name').textContent = state.profile.name
+      $('#profile-email').textContent = state.profile.email
+      $('#profile-modal').classList.remove('open')
+      toast('Profile saved')
+    })
+
+    // Theme toggle
+    $$('#profile-modal [data-theme]').forEach(btn=> btn.addEventListener('click', ()=>{
+      state.profile.theme = btn.dataset.theme; storage.save('profile', state.profile); applyTheme(); toast(`Theme: ${state.profile.theme}`)
+    }))
+    function applyTheme(){
+      const t = state.profile.theme;
+      document.documentElement.dataset.theme = t;
+      if(t==='light') document.documentElement.style.colorScheme = 'light';
+      else if(t==='dark') document.documentElement.style.colorScheme = 'dark';
+      else document.documentElement.style.colorScheme = 'normal';
+    }
+
+    // Export JSON
+    $('#export-json').addEventListener('click', ()=>{
+      const data = { tasks: state.tasks, projects: state.projects, profile: state.profile }
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'})
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a'); a.href=url; a.download='pro-todo-data.json'; a.click(); URL.revokeObjectURL(url)
+    })
+
+    // ————— Bootstrap —————
+    function bootstrap(){
+      renderProjects();
+      // seed example
+      if(!state.tasks.length){
+        state.tasks = [
+          {id:uid(), title:'Welcome to Pro To‑Do', date: todayStr(), priority:'high', tags:['first','demo'], done:false, project:'inbox', createdAt:Date.now()},
+          {id:uid(), title:'Open the left menu (☰) to switch views', date:'', priority:'medium', tags:['tips'], done:false, project:'inbox', createdAt:Date.now()},
+          {id:uid(), title:'Click your avatar to edit profile', date:'', priority:'low', tags:['profile'], done:false, project:'inbox', createdAt:Date.now()},
+        ];
+        storage.save('tasks', state.tasks)
+        addNotif('You have 3 starter tips. Enjoy!')
+      }
+      $('#profile-name').textContent = state.profile.name
+      $('#profile-email').textContent = state.profile.email
+      applyTheme();
+      renderNotifs();
+      renderTasks();
+    }
+    bootstrap();
+  </script>
+</body>
+</html>
